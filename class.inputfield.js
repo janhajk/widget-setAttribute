@@ -65,7 +65,17 @@ class classInputField {
             }
             // ************   end multi value input field
       }
-      // if there is a total field
+
+
+
+
+      /**
+       * if there is a total field (array) this updates it
+       *
+       *
+       *
+       *
+       */
       updateSummary = function() {
             let value = '';
             if (this.summary && this.params.multitype && this.params.multitype === 'array') {
@@ -98,12 +108,22 @@ class classInputField {
             // console.log('value:', value);
       }
 
+      /**
+       *
+       * disables the send button
+       *
+       */
       disableSendButton = function() {
             $(this.angularself.ctx.$scope.btnSend).off('click');
             $(this.angularself.ctx.$scope.btnSend).removeClass('btn-primary');
             $(this.angularself.ctx.$scope.btnSend).addClass('btn-danger');
       }
 
+      /**
+       *
+       * enables the send button
+       *
+       */
       enableSendButton = function() {
             $(this.angularself.ctx.$scope.btnSend).off('click');
             $(this.angularself.ctx.$scope.btnSend).removeClass('btn-danger');
@@ -111,7 +131,7 @@ class classInputField {
             $(this.angularself.ctx.$scope.btnSend).click(this.angularself.ctx.$scope.sendUpdate);
       }
 
-      // add new input field which will be added to container
+
       /**
        *
        * Create new input field DOM
@@ -120,16 +140,17 @@ class classInputField {
        *
        */
       addInputField = function() {
-            let myself = this;
+            let myself = this; // used for sub functions
 
             let container = this.containerBody;
 
             // subcontainer for multi forms
             if (this.params.multi) {
-                  container = document.createElement('div');
+                  container = document.createElement('div'); // overwrites default container variable
                   this.containerBody.appendChild(container);
             }
 
+            // label & input are array of length 1, if not a multi inputfield
             this.label.push(document.createElement('label'));
             this.input.push(document.createElement('input'));
 
@@ -137,14 +158,14 @@ class classInputField {
             const curInput = this.input[this.input.length - 1];
 
 
+            // Label
             curLabel.className = 'form-label';
             curLabel.innerHTML = this.params.title.replace('%s', this.params.value || 0);
+            curLabel.setAttribute('for', 'cstmFrmInput-' + this.params.key);
 
-            curLabel.for = 'cstmFrmInput-' + this.params.key;
-
+            // input field
             curInput.name = this.params.key || 'thisFieldhasNoKeyPleaseSetAKey';
-
-            curInput.id = 'cstmFrmInput-' + this.params.key;
+            curInput.id = 'cstmFrmInput-' + this.params.key; // id is needed to associate with label
 
             if (this.params.multi) {
                   curLabel.innerHTML = this.params.title.replace('%s', this.params.value || 0).replace(':', '') + ' ' + this.counter + ':';
@@ -159,7 +180,8 @@ class classInputField {
                         curInput.max = this.params.max || 100;
                         curInput.step = this.params.step || 0.1;
                         curInput.value = this.params.value || 0;
-                        curInput.oninput = () => $(myself.label[0]).html(myself.params.title.replace('%s', $(myself.input[0]).val()));
+                        // update label
+                        curInput.oninput = () => this.updateLabel(curLabel, $(curInput).val());
                         container.appendChild(curLabel);
                         container.appendChild(curInput);
                         break;
@@ -195,14 +217,36 @@ class classInputField {
 
                   });
       }
+
+
+      updateLabel = function(label, value) {
+            value = this.params.title.replace('%s', $(value));
+            $(label).html(value);
+      }
+
+      /**
+       *
+       * Checks, if there is a pattern for the input value and checks it against it
+       * only for text fields
+       *
+       *
+       */
       checkPattern = function(input, value) {
             let correct = false;
-            if (!this.params.pattern) correct = true;
+            if (!this.params.pattern) return true; // no pattern set
             let reg = new RegExp(this.params.pattern);
-            if (reg.test(value)) correct = true;
+            if (reg.test(value)) return true;
             if (!correct) this.shake(input);
-            return correct;
+            return false;
       }
+
+      /**
+       *
+       * Shake animation for textfield
+       * used when user inputs wrong values (according to pattern setting)
+       *
+       *
+       */
       shake = function(domElement) {
             domElement.classList.add('shake');
             setTimeout(function() {
@@ -210,8 +254,19 @@ class classInputField {
             }, 200);
       }
 
-      // get default value from server attribute (which is last set value)
-      // returns promise
+      /**
+       *
+       * get default value from server attribute (which is last set value)
+       * returns a promise with requested attributes
+       * example of returned data:
+
+            [{
+                  "lastUpdateTs": 1644836402754,
+                  "key": "startMission_startPos",
+                  "value": "-500"
+            }]
+       *
+       */
       getDefaultValue = function(attributeKey) {
             let entityAttributeType = this.angularself.ctx.settings.entityAttributeType;
             let attributeService = this.angularself.ctx.$scope.$injector.get(this.angularself.ctx.servicesMap.get('attributeService'));
@@ -220,14 +275,13 @@ class classInputField {
                   id: this.angularself.ctx.defaultSubscription.targetDeviceId
             };
             return new Promise((resolve, reject) => {
-                  attributeService.getEntityAttributes(entityId,
-                        entityAttributeType, [attributeKey]).subscribe(
+                  attributeService.getEntityAttributes(entityId, entityAttributeType, [attributeKey]).subscribe(
                         function success(data) {
                               console.log(data);
                               resolve(data);
                         },
-                        function fail(rejection) {
-                              reject(rejection);
+                        function fail(e) {
+                              reject(e);
                         }
                   );
             });
