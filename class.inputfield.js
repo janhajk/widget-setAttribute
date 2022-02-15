@@ -1,4 +1,4 @@
-export class classInputField {
+class classInputField {
       constructor(type, parentDom, params, angular) {
             this.type = type;
             this.parentDom = parentDom;
